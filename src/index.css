@@ -1,0 +1,95 @@
+/* =========================
+   Base & Resets (Project)
+   ========================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  /* נקבע גם כאן למקרה שיש הטמעות בלי ה-Theme */
+  direction: rtl;
+}
+
+body {
+  margin: 0;
+  font-family: "Heebo", "Rubik", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f7f7f9; /* רקע עדין לכל האפליקציה */
+  color: #222;
+}
+
+/* קישורים בלי קו תחתון כברירת מחדל (MUI שומר פוקוס/נגישות) */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* תמונות/SVG רספונסיביים כברירת מחדל */
+img,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================
+   Layout Helpers (Standards)
+   ========================= */
+
+/* כרטיס/סקשן עיקרי במסכים */
+.section-card {
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  /* צל עדין אחיד עם MUI */
+  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+
+/* כותרת סקשן */
+.section-title {
+  margin: 0 0 12px 0;
+  line-height: 1.25;
+}
+
+/* גריד לטפסים — מחליף שימוש ב-sx ללייאאוט */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px; /* ריווח אחיד בין האלמנטים בטופס */
+}
+
+@media (min-width: 900px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr; /* בשולחן עבודה: שתי עמודות */
+  }
+}
+
+/* אלמנט שתופס שורה מלאה בגריד */
+.full-row {
+  grid-column: 1 / -1;
+}
+
+/* =========================
+   Utilities (שימוש נקודתי)
+   ========================= */
+
+/* ריווח אנכי קטן בין אלמנטים (אם צריך) */
+.stack-gap-8 > * + * { margin-block-start: 8px; }
+.stack-gap-12 > * + * { margin-block-start: 12px; }
+.stack-gap-16 > * + * { margin-block-start: 16px; }
+
+/* טקסט משני */
+.text-muted { color: #6b7280; } /* אפור בינוני */
+
+/* יישור לימין/שמאל במידת הצורך */
+.text-start { text-align: start; }
+.text-end   { text-align: end; }
