@@ -11,14 +11,13 @@ import {
   Stack,
   LinearProgress,
 } from '@mui/material';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 
 import type { Ticket, Category, Message } from '../../types/models';
 import * as ds from '../../services/dataSource';
 import { useToast } from '../../components/ToastProvider';
 
-// עזרים לתאריכים/מיון
 function toMillis(v: any): number {
   if (!v) return 0;
   if (typeof v === 'string') return new Date(v).getTime();
@@ -39,30 +38,25 @@ export default function TicketDetails() {
 
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
+  const [cats, setCats] = useState<Category[]>([]);
   const [thread, setThread] = useState<Message[]>([]);
   const [reply, setReply] = useState('');
   const [err, setErr] = useState('');
 
-  const loadData = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const t = await ds.get<Ticket>('tickets', id);
-      setTicket(t ?? null);
-
-      if (t?.categoryId) {
-        // Load all categories once – או get לפי id אם תרצה
-        const cats = await ds.list<Category>('categories');
-        setCategory(cats.find(c => c.id === t.categoryId) ?? null);
-      } else {
-        setCategory(null);
-      }
-
-      const allMsgs = await ds.list<Message>('messages');
-      const msgs = allMsgs
-        .filter(m => m.ticketId === id)
-        .sort((a, b) => toMillis(a.createdAt as any) - toMillis(b.createdAt as any));
+      const [t, categories, allMsgs] = await Promise.all([
+        ds.get<Ticket>('tickets', id),
+        ds.list<Category>('categories'),
+        ds.list<Message>('messages'),
+      ]);
+      setTicket(t as Ticket | null);
+      setCats(categories);
+      const msgs = (allMsgs || [])
+        .filter((m) => m.ticketId === id)
+        .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
       setThread(msgs);
     } catch (e) {
       showToast('Failed to load ticket', { severity: 'error' });
@@ -72,14 +66,17 @@ export default function TicketDetails() {
   }, [id, showToast]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadAll();
+  }, [loadAll]);
 
-  const catName = useMemo(() => category?.name ?? '—', [category]);
+  const catName = useMemo(
+    () => cats.find((c) => c.id === ticket?.categoryId)?.name ?? '—',
+    [cats, ticket]
+  );
 
   async function addReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!ticket || !id) return;
+    if (!ticket) return;
 
     const trimmed = reply.trim();
     if (!trimmed) {
@@ -87,36 +84,44 @@ export default function TicketDetails() {
       return;
     }
 
+    const newMsg: Partial<Message> = {
+      id: uuid(), // ב-Firestore נקבל id אוטומטי; dataSource מנרמל להחזרה {id,...}
+      ticketId: ticket.id,
+      author: 'staff',
+      body: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+
     try {
-      // שומר ל-Firestore (ds.create מוסיף serverTimestamp())
-      const newMsg: Omit<Message, 'id'> = {
-        ticketId: id,
-        author: 'staff',
-        body: trimmed,
-        // createdAt יגיע מ-serverTimestamp; אין צורך לשים כאן מחרוזת, אבל זה לא מזיק אם תרצה לשים Optimistic UI
-      } as any;
-
-      await ds.create<Message>('messages', newMsg);
-
+      const created = await ds.create<Message>('messages', newMsg);
+      setThread((prev) =>
+        [...prev, created].sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt))
+      );
       setReply('');
       setErr('');
       showToast('Reply added', { severity: 'success' });
-
-      // טען מחדש כדי לקבל את ה-Timestamp מהשרת
-      await loadData();
     } catch {
       showToast('Failed to add reply', { severity: 'error' });
     }
   }
 
   if (loading) {
-    return <LinearProgress />;
+    return (
+      <Paper component="section" className="section-card" sx={{ p: 2 }}>
+        <Typography variant="h6" className="section-title">
+          Loading ticket…
+        </Typography>
+        <LinearProgress sx={{ mt: 1 }} />
+      </Paper>
+    );
   }
 
   if (!ticket) {
     return (
       <Paper component="section" className="section-card" sx={{ p: 2 }}>
-        <Typography variant="h6" className="section-title">Ticket not found</Typography>
+        <Typography variant="h6" className="section-title">
+          Ticket not found
+        </Typography>
         <Button sx={{ mt: 1 }} onClick={() => navigate('/tickets')} variant="outlined">
           Back to list
         </Button>
@@ -135,21 +140,24 @@ export default function TicketDetails() {
           <Chip label={`Category: ${catName}`} />
           <Chip
             label={`Status: ${ticket.status}`}
-            color={ticket.status === 'open' ? 'primary' : ticket.status === 'closed' ? 'default' : 'warning'}
+            color={
+              ticket.status === 'open'
+                ? 'primary'
+                : ticket.status === 'closed'
+                ? 'default'
+                : 'warning'
+            }
             variant="outlined"
           />
-          <Chip label={fmtDate(ticket.createdAt as any)} variant="outlined" />
-          <Chip label={<Link to="/tickets">Back to list</Link>} variant="outlined" />
+          <Chip label={fmtDate(ticket.createdAt)} variant="outlined" />
         </Stack>
 
         <Divider sx={{ mb: 2 }} />
 
         <Stack spacing={1.5} sx={{ mb: 3 }}>
-          {thread.length === 0 && (
-            <Typography className="text-muted">No messages yet.</Typography>
-          )}
+          {thread.length === 0 && <Typography className="text-muted">No messages yet.</Typography>}
 
-          {thread.map(m => (
+          {thread.map((m) => (
             <Paper key={m.id} sx={{ p: 1.5, bgcolor: m.author === 'student' ? '#fff' : '#f4f6f8' }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
                 <Chip
@@ -159,7 +167,7 @@ export default function TicketDetails() {
                   variant="outlined"
                 />
                 <Typography variant="caption" className="text-muted">
-                  {fmtDate(m.createdAt as any)}
+                  {fmtDate(m.createdAt)}
                 </Typography>
               </Stack>
               <Typography>{m.body}</Typography>

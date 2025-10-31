@@ -1,3 +1,4 @@
+// src/types/models.ts
 export type TicketStatus = 'open' | 'pending' | 'closed';
 
 export interface Category {
@@ -17,8 +18,8 @@ export interface Ticket {
   categoryId: string;
   studentId: string;
   status: TicketStatus;
-  createdAt: string;
-  // אופציונלי: לשמירת טקסט "אחר" וכד'
+  // יכול להיות string (LocalStorage) או Firestore Timestamp (obj עם toDate)
+  createdAt: any;
   meta?: {
     other?: string;
   };
@@ -29,5 +30,6 @@ export interface Message {
   ticketId: string;
   author: 'student' | 'staff';
   body: string;
-  createdAt: string;
+  // יכול להיות string או Firestore Timestamp
+  createdAt: any;
 }

@@ -1,14 +1,16 @@
-import { Drawer, List, ListItemButton, ListItemText, Toolbar, Box } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+// src/components/NavDrawer.tsx
+import { Drawer, List, ListItemButton, ListItemText, Toolbar, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-const DRAWER_WIDTH = 280
+const DRAWER_WIDTH = 280;
+
 type Props = {
-  mobileOpen?: boolean
-  onCloseMobile?: () => void
-}
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+};
 
 export default function NavDrawer({ mobileOpen, onCloseMobile }: Props) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const content = (
     <>
@@ -31,16 +33,25 @@ export default function NavDrawer({ mobileOpen, onCloseMobile }: Props) {
         <ListItemButton onClick={() => navigate('/categories/new')}>
           <ListItemText primary="New Category" />
         </ListItemButton>
+
+        <ListItemButton onClick={() => navigate('/portal')}>
+          <ListItemText primary="Student Portal" />
+        </ListItemButton>
+
         <ListItemButton onClick={() => navigate('/bootstrap')}>
           <ListItemText primary="Learning: Bootstrap" />
         </ListItemButton>
+
+        <ListItemButton onClick={() => navigate('/debug')}>
+          <ListItemText primary="Debug" />
+        </ListItemButton>
       </List>
     </>
-  )
+  );
 
   return (
     <Box component="nav" aria-label="Main navigation">
-      {/* Temporary drawer for mobile */}
+      {/* Mobile */}
       <Drawer
         variant="temporary"
         open={!!mobileOpen}
@@ -51,7 +62,7 @@ export default function NavDrawer({ mobileOpen, onCloseMobile }: Props) {
         {content}
       </Drawer>
 
-      {/* Permanent drawer for larger screens */}
+      {/* Desktop */}
       <Drawer
         variant="permanent"
         sx={{
@@ -66,5 +77,5 @@ export default function NavDrawer({ mobileOpen, onCloseMobile }: Props) {
         {content}
       </Drawer>
     </Box>
-  )
+  );
 }

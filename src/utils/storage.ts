@@ -4,7 +4,7 @@ export const LS_KEYS = {
   students: 'ss_students',
   tickets: 'ss_tickets',
   messages: 'ss_messages',
-  currentStudentId: 'ss_current_student_id', // חדש
+  currentStudentId: 'ss_current_student_id', // חדש: לפורטל
 } as const;
 
 export function readLS<T>(key: string, fallback: T): T {
