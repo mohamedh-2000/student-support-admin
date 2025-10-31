@@ -1,0 +1,70 @@
+/* בסיס */
+:root {
+  color-scheme: light dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  background: #f7f8fa;
+}
+
+/* ריווח בסיס */
+.container {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+/* כרטיס/סקשן אחיד */
+.section-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px auto;
+  max-width: 1200px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* כותרת סקשן */
+.section-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* גריד טפסים אחיד */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.full-row {
+  grid-column: 1 / -1;
+}
+
+/* טקסט חלש */
+.text-muted {
+  opacity: 0.7;
+}
+
+/* התנהגות RTL/מרכז */
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* DataGrid – קומפקטיות עדינה */
+.MuiDataGrid-root .MuiDataGrid-columnHeaders { padding-block: 6px; }
+.MuiDataGrid-root .MuiDataGrid-cell { padding-block: 6px; }
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
