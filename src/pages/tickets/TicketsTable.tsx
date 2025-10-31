@@ -10,6 +10,14 @@ import type { Ticket, Category } from '../../types/models';
 import * as ds from '../../services/dataSource';
 import { useToast } from '../../components/ToastProvider';
 
+// תומך גם במחרוזת וגם ב-Firestore Timestamp
+function fmtDate(v: any) {
+  if (!v) return '—';
+  if (typeof v === 'string') return new Date(v).toLocaleString();
+  if (v?.toDate) return v.toDate().toLocaleString(); // Timestamp
+  return '—';
+}
+
 export default function TicketsTable() {
   const [rows, setRows] = useState<Ticket[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
@@ -67,7 +75,13 @@ export default function TicketsTable() {
       ),
     },
     { field: 'status', headerName: 'Status', width: 100, minWidth: 90 },
-    { field: 'createdAt', headerName: 'Created', flex: 1, minWidth: 160 },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      minWidth: 160,
+      renderCell: (p: GridRenderCellParams<Ticket>) => <span>{fmtDate(p.row.createdAt as any)}</span>,
+    },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -123,24 +137,16 @@ export default function TicketsTable() {
             initialState={{
               pagination: { paginationModel: { pageSize: 10, page: 0 } },
             }}
-              sx={{
-                '& .MuiDataGrid-columnHeaders': { py: 0.75 },
-                '& .MuiDataGrid-cell': { py: 0.75 },
-                // Keep pagination / footer controls on a single line (prevent wrapping)
-                '& .MuiDataGrid-footerContainer': {
-                  '& .MuiTablePagination-root': {
-                    whiteSpace: 'nowrap',
-                    // ensure items don't wrap inside the pagination toolbar
-                    '& .MuiTablePagination-spacer': { display: 'none' },
-                  },
-                  // displayed rows text (e.g. "1-10 of 13") should not wrap
-                  '& .MuiTablePagination-displayedRows': { whiteSpace: 'nowrap' },
-                  // the select label / rows-per-page label
-                  '& .MuiTablePagination-selectLabel': { whiteSpace: 'nowrap' },
-                },
-                // Also guard the overall table pagination components
-                '& .MuiTablePagination-root': { whiteSpace: 'nowrap' },
-              }}
+            sx={{
+              '& .MuiDataGrid-columnHeaders': { py: 0.75 },
+              '& .MuiDataGrid-cell': { py: 0.75 },
+              '& .MuiDataGrid-footerContainer': {
+                '& .MuiTablePagination-root': { whiteSpace: 'nowrap', '& .MuiTablePagination-spacer': { display: 'none' } },
+                '& .MuiTablePagination-displayedRows': { whiteSpace: 'nowrap' },
+                '& .MuiTablePagination-selectLabel': { whiteSpace: 'nowrap' },
+              },
+              '& .MuiTablePagination-root': { whiteSpace: 'nowrap' },
+            }}
           />
         </Box>
       </Paper>

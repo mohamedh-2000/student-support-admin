@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+// src/pages/tickets/TicketDetails.tsx
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -8,76 +9,124 @@ import {
   TextField,
   Button,
   Stack,
-} from '@mui/material'
-import { useNavigate, useParams } from 'react-router-dom'
-import { v4 as uuid } from 'uuid'
+  LinearProgress,
+} from '@mui/material';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { v4 as uuid } from 'uuid';
 
-import type { Ticket, Category, Message } from '../../types/models'
-import { LS_KEYS, readLS, writeLS } from '../../utils/storage'
-import { useToast } from '../../components/ToastProvider'
+import type { Ticket, Category, Message } from '../../types/models';
+import * as ds from '../../services/dataSource';
+import { useToast } from '../../components/ToastProvider';
+
+// עזרים לתאריכים/מיון
+function toMillis(v: any): number {
+  if (!v) return 0;
+  if (typeof v === 'string') return new Date(v).getTime();
+  if (v?.toDate) return v.toDate().getTime();
+  return 0;
+}
+function fmtDate(v: any) {
+  if (!v) return '—';
+  if (typeof v === 'string') return new Date(v).toLocaleString();
+  if (v?.toDate) return v.toDate().toLocaleString();
+  return '—';
+}
 
 export default function TicketDetails() {
-  const { showToast } = useToast()
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { showToast } = useToast();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-  const tickets    = readLS<Ticket[]>(LS_KEYS.tickets, [])
-  const messages   = readLS<Message[]>(LS_KEYS.messages, [])
-  const categories = readLS<Category[]>(LS_KEYS.categories, [])
+  const [loading, setLoading] = useState(true);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [thread, setThread] = useState<Message[]>([]);
+  const [reply, setReply] = useState('');
+  const [err, setErr] = useState('');
 
-  const ticket = useMemo(() => tickets.find(t => t.id === id), [tickets, id])
-  const catName = useMemo(
-    () => categories.find(c => c.id === ticket?.categoryId)?.name ?? '—',
-    [categories, ticket]
-  )
-  const thread = useMemo(
-    () => messages.filter(m => m.ticketId === id).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [messages, id]
-  )
+  const loadData = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const t = await ds.get<Ticket>('tickets', id);
+      setTicket(t ?? null);
 
-  const [reply, setReply] = useState('')
-  const [err, setErr] = useState('')
+      if (t?.categoryId) {
+        // Load all categories once – או get לפי id אם תרצה
+        const cats = await ds.list<Category>('categories');
+        setCategory(cats.find(c => c.id === t.categoryId) ?? null);
+      } else {
+        setCategory(null);
+      }
 
-  function addReply(e: React.FormEvent) {
-    e.preventDefault()
-    if (!ticket) return
+      const allMsgs = await ds.list<Message>('messages');
+      const msgs = allMsgs
+        .filter(m => m.ticketId === id)
+        .sort((a, b) => toMillis(a.createdAt as any) - toMillis(b.createdAt as any));
+      setThread(msgs);
+    } catch (e) {
+      showToast('Failed to load ticket', { severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, [id, showToast]);
 
-    const trimmed = reply.trim()
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const catName = useMemo(() => category?.name ?? '—', [category]);
+
+  async function addReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ticket || !id) return;
+
+    const trimmed = reply.trim();
     if (!trimmed) {
-      setErr('שדה חובה')
-      return
+      setErr('שדה חובה');
+      return;
     }
 
-    const newMsg: Message = {
-      id: uuid(),
-      ticketId: ticket.id,
-      author: 'staff',
-      body: trimmed,
-      createdAt: new Date().toISOString(),
+    try {
+      // שומר ל-Firestore (ds.create מוסיף serverTimestamp())
+      const newMsg: Omit<Message, 'id'> = {
+        ticketId: id,
+        author: 'staff',
+        body: trimmed,
+        // createdAt יגיע מ-serverTimestamp; אין צורך לשים כאן מחרוזת, אבל זה לא מזיק אם תרצה לשים Optimistic UI
+      } as any;
+
+      await ds.create<Message>('messages', newMsg);
+
+      setReply('');
+      setErr('');
+      showToast('Reply added', { severity: 'success' });
+
+      // טען מחדש כדי לקבל את ה-Timestamp מהשרת
+      await loadData();
+    } catch {
+      showToast('Failed to add reply', { severity: 'error' });
     }
+  }
 
-    const nextMsgs = [...readLS<Message[]>(LS_KEYS.messages, []), newMsg]
-    writeLS(LS_KEYS.messages, nextMsgs)
-
-    setReply('')
-    setErr('')
-    showToast('Reply added', { severity: 'success' })
+  if (loading) {
+    return <LinearProgress />;
   }
 
   if (!ticket) {
     return (
-      <Paper component="section" className="section-card">
+      <Paper component="section" className="section-card" sx={{ p: 2 }}>
         <Typography variant="h6" className="section-title">Ticket not found</Typography>
         <Button sx={{ mt: 1 }} onClick={() => navigate('/tickets')} variant="outlined">
           Back to list
         </Button>
       </Paper>
-    )
+    );
   }
 
   return (
     <Box>
-      <Paper component="section" className="section-card" aria-labelledby="ticket-title">
+      <Paper component="section" className="section-card" aria-labelledby="ticket-title" sx={{ p: 2 }}>
         <Typography id="ticket-title" variant="h6" className="section-title">
           {ticket.subject}
         </Typography>
@@ -89,7 +138,8 @@ export default function TicketDetails() {
             color={ticket.status === 'open' ? 'primary' : ticket.status === 'closed' ? 'default' : 'warning'}
             variant="outlined"
           />
-          <Chip label={new Date(ticket.createdAt).toLocaleString()} variant="outlined" />
+          <Chip label={fmtDate(ticket.createdAt as any)} variant="outlined" />
+          <Chip label={<Link to="/tickets">Back to list</Link>} variant="outlined" />
         </Stack>
 
         <Divider sx={{ mb: 2 }} />
@@ -109,7 +159,7 @@ export default function TicketDetails() {
                   variant="outlined"
                 />
                 <Typography variant="caption" className="text-muted">
-                  {new Date(m.createdAt).toLocaleString()}
+                  {fmtDate(m.createdAt as any)}
                 </Typography>
               </Stack>
               <Typography>{m.body}</Typography>
@@ -125,8 +175,8 @@ export default function TicketDetails() {
             minRows={3}
             value={reply}
             onChange={(e) => {
-              setReply(e.target.value)
-              if (err) setErr('')
+              setReply(e.target.value);
+              if (err) setErr('');
             }}
             required
             error={!!err}
@@ -144,5 +194,5 @@ export default function TicketDetails() {
         </form>
       </Paper>
     </Box>
-  )
+  );
 }

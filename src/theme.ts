@@ -2,16 +2,17 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
 let theme = createTheme({
-  direction: 'ltr', // אם תרצה עברית מלאה — שנה ל-'rtl'
+  direction: 'rtl', // עברית
   palette: {
     primary: { main: '#1976d2' },
   },
   typography: {
-    fontFamily: 'Roboto, Arial, sans-serif',
+    // עדיף פונטים שתומכים עברית; אם אין – Roboto בסדר
+    fontFamily: '"Rubik","Heebo","Assistant","Roboto","Arial",sans-serif',
   },
 });
 
-// מוסיף תמיכה רספונסיבית לפונטים
+// פונטים רספונסיביים
 theme = responsiveFontSizes(theme);
 
 export default theme;
